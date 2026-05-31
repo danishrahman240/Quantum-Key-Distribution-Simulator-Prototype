@@ -1,5 +1,5 @@
 import random
-"""import matplotlib.pyplot as plt"""
+import matplotlib.pyplot as plt
 
 from bb84 import (
     generate_bits,
@@ -10,190 +10,125 @@ from bb84 import (
 )
 
 
-def eve_intercept(qubits, alice_bases):
+def eve_intercept(qubits, alice_bases, intercept_rate=1.0):
     """
-    This function simulates Eve, the hacker/eavesdropper.
-
-    Eve intercepts Alice's qubits before they reach Bob.
-    Eve randomly chooses bases to measure the qubits.
-    If Eve chooses the wrong basis, she disturbs the qubit.
+    Simulates Eve the eavesdropper.
+    intercept_rate: fraction of qubits Eve attacks (0.0 to 1.0)
+    - 1.0 = Eve attacks all qubits
+    - 0.5 = Eve attacks half the qubits
+    - 0.0 = Eve attacks nothing (no disturbance)
     """
-
     eve_bases = generate_bases(len(qubits))
-
-    # This list will store the qubits after Eve touches them
     disturbed = []
 
-
     for q, ab, eb in zip(qubits, alice_bases, eve_bases):
-
-        # If Alice's basis and Eve's basis are same,
-        # Eve measures correctly, so no disturbance happens
-        if ab == eb:
+        if random.random() < intercept_rate:
+            # Same basis → Eve gets correct state, no disturbance
+            if ab == eb:
+                disturbed.append(q)
+            # Different basis → qubit is randomly disturbed
+            else:
+                disturbed.append(random.choice(['|0>', '|1>', '|+>', '|->']))
+        else:
+            # Eve leaves this qubit untouched
             disturbed.append(q)
 
-        # If Eve uses the wrong basis,
-        # the qubit gets disturbed
-        else:
-            disturbed.append(random.choice(['|0>', '|1>', '|+>', '|->']))
-
-    # Return the qubits after Eve's interception
     return disturbed
 
 
 def compute_qber(alice_key, bob_key, sample=50):
     """
-    QBER = Quantum Bit Error Rate
-
-    This function compares Alice's key and Bob's key.
-    It checks how many bits are different.
-    More difference means more error.
-    More error may mean Eve is present.
+    Quantum Bit Error Rate — fraction of mismatched bits between Alice and Bob.
+    Higher QBER means more disturbance, likely caused by Eve.
+    Threshold: QBER > 11% → Eve is detected.
     """
-
-    # Choose how many key bits to check
-    # But if key length is less than 50, check only available bits
     check = min(sample, len(alice_key))
-
-    # Count how many bits are different between Alice and Bob
-    errors = sum(
-        a != b
-        for a, b in zip(alice_key[:check], bob_key[:check])
-    )
-
-    # Calculate error percentage
-    # Formula: QBER = errors / checked bits × 100
-    if check > 0:
-        return round(errors / check * 100, 1)
-    else:
-        return 0
+    errors = sum(a != b for a, b in zip(alice_key[:check], bob_key[:check]))
+    return round(errors / check * 100, 1) if check > 0 else 0
 
 
-def run_with_eve(n=300, eve_present=True):
+def run_with_eve(n=300, eve_present=True, intercept_rate=1.0):
     """
-    This is the main function.
-
-    It runs BB84 key generation.
-    It can run in two ways:
-
-    1. Without Eve
-    2. With Eve
+    Runs the full BB84 protocol with optional Eve.
+    Returns: (qber, status_string)
     """
-
-    # Alice creates random secret bits
-    alice_bits = generate_bits(n)
-
-    # Alice chooses random bases for encoding
+    alice_bits  = generate_bits(n)
     alice_bases = generate_bases(n)
+    bob_bases   = generate_bases(n)
+    qubits      = encode_qubits(alice_bits, alice_bases)
 
-    # Bob chooses random bases for measuring
-    bob_bases = generate_bases(n)
-
-    # Alice converts her bits into qubit states
-    qubits = encode_qubits(alice_bits, alice_bases)
-
-    # If Eve is present, she intercepts the qubits
     if eve_present:
-        qubits = eve_intercept(qubits, alice_bases)
+        qubits = eve_intercept(qubits, alice_bases, intercept_rate)
 
-    # Bob measures the qubits using his random bases
-    bob_bits = measure_qubits(qubits, alice_bases, bob_bases)
+    bob_bits            = measure_qubits(qubits, alice_bases, bob_bases)
+    alice_key, bob_key  = sift_key(alice_bits, bob_bits, alice_bases, bob_bases)
+    qber                = compute_qber(alice_key, bob_key)
 
-    # Alice and Bob keep only the bits where their bases match
-    alice_key, bob_key = sift_key(
-        alice_bits,
-        bob_bits,
-        alice_bases,
-        bob_bases
-    )
-
-    # Calculate error percentage between Alice's and Bob's keys
-    qber = compute_qber(alice_key, bob_key)
-
-    # If QBER is greater than 11%, assume Eve is detected
     if qber > 11:
-        status = "\033[94mSECURITY ALERT: Eavesdropper detected!\033[0m"
+        status = "\033[91mSECURITY ALERT: Eavesdropper detected!\033[0m"
     else:
         status = "\033[92mSecure — no eavesdropper\033[0m"
 
-    # Print final result
-    print(f"\nEve present : {eve_present}")
-    print(f"QBER        : {qber}%")
-    print(f"Status      : {status}")
-
-    # Return values for further use
-    return qber, status
-
-def run_experiment_20_times():
-    # Lists to store QBER values
-    qber_no_eve = []
-    qber_eve = []
-
-    # Run BB84 10 times without Eve
-    for i in range(10):
-        qber, status = run_with_eve(n=300, eve_present=False)
-        qber_no_eve.append(qber)
-
-    # Run BB84 10 times with Eve
-    for i in range(10):
-        qber, status = run_with_eve(n=300, eve_present=True)
-        qber_eve.append(qber)
-
-    # Print stored QBER values
-    print("\nQBER values without Eve:")
-    print(qber_no_eve)
-
-    print("\nQBER values with Eve:")
-    print(qber_eve)
-
-    return qber_no_eve, qber_eve
+    print(f"Eve present : {eve_present}  |  Intercept rate : {intercept_rate}  |  QBER : {qber}%  |  {status}")
+    return qber, status, alice_key, bob_key
 
 
-"""def plot_qber(qber_no_eve, qber_eve):
-    # Create x-axis values: run numbers 1 to 10
-    runs = range(1, 11)
+def run_eve_30_times():
+    """
+    Day 8 — Task 1:
+    Run BB84 with Eve ON (100% intercept) 30 times.
+    Logs all QBER values and prints the average.
+    """
+    print("\n--- Task 1: Eve ON (100% intercept) — 30 runs ---")
+    results = [run_with_eve(300, True, intercept_rate=1.0)[0] for _ in range(30)]
+    average_qber = sum(results) / len(results)
+    print(f"\nAll QBER values : {results}")
+    print(f"Average QBER    : {average_qber:.1f}%")
+    return results, average_qber
 
-    # Plot QBER without Eve using blue line
-    plt.plot(runs, qber_no_eve, color="blue", marker="o", label="No Eve")
 
-    # Plot QBER with Eve using red line
-    plt.plot(runs, qber_eve, color="red", marker="o", label="Eve Present")
+def plot_qber_vs_intercept_rate():
+    """
+    Day 8 — Task 3:
+    Plots QBER vs Eve's intercept rate (0% to 100%).
+    Saves graph as eve_rate_graph.png.
+    """
+    print("\n--- Task 3: QBER vs Eve intercept rate ---")
+    intercept_rates = [i / 10 for i in range(11)]   # 0.0, 0.1, ... 1.0
+    avg_qbers = []
 
-    # Draw dashed horizontal threshold line at 11%
-    plt.axhline(y=11, color="black", linestyle="--", label="QBER Threshold = 11%")
+    for rate in intercept_rates:
+        results  = [run_with_eve(300, True, intercept_rate=rate)[0] for _ in range(20)]
+        avg_qber = sum(results) / len(results)
+        avg_qbers.append(avg_qber)
+        print(f"Intercept rate = {int(rate*100):3d}%  →  Avg QBER = {avg_qber:.1f}%")
 
-    # Add graph title and labels
-    plt.title("QBER Comparison: With Eve vs Without Eve")
-    plt.xlabel("Experiment Run")
-    plt.ylabel("QBER (%)")
+    x_labels = [int(r * 100) for r in intercept_rates]
 
-    # Show run numbers clearly
-    plt.xticks(runs)
-
-    # Show legend
+    plt.figure(figsize=(9, 5))
+    plt.plot(x_labels, avg_qbers, color='#E24B4A', marker='o', linewidth=2, markersize=6)
+    plt.axhline(y=11, color='black', linestyle='--', linewidth=1.5, label='Detection threshold (11%)')
+    plt.fill_between(x_labels, 11, avg_qbers,
+                     where=[q > 11 for q in avg_qbers],
+                     alpha=0.15, color='#E24B4A', label='Eve detectable zone')
+    plt.title("QBER vs Eve Intercept Rate", fontsize=13, fontweight='bold')
+    plt.xlabel("Eve Intercept Rate (%)")
+    plt.ylabel("Measured QBER (%)")
+    plt.xticks(x_labels)
+    plt.ylim(0, 32)
     plt.legend()
-
-    # Show grid for easy reading
-    plt.grid(True)
-
-    # Display the graph
+    plt.grid(True, alpha=0.4)
+    plt.tight_layout()
+    plt.savefig("eve_rate_graph.png", dpi=150)
+    print("\nGraph saved → eve_rate_graph.png")
     plt.show()
-    plt.savefig('qber_comparison.png', dpi=150)
-    
-    this code is to view the QBER comparison graph after running the experiments 20 times. It plots two lines: one for QBER without Eve and one for QBER with Eve, along with a threshold line at 11%. The graph includes titles, labels, legends, and grid for better visualization."""
 
-# Program starts from here
+    return x_labels, avg_qbers
+
+
 if __name__ == "__main__":
+    # Task 1 — 30 runs with full Eve, print average QBER
+    run_eve_30_times()
 
-    # First run: Eve is not present
-    run_with_eve(eve_present=False)
-
-    # Second run: Eve is present
-    run_with_eve(eve_present=True)
-
-"""if __name__ == "__main__":
-    qber_no_eve, qber_eve = run_experiment_20_times()
-
-    plot_qber(qber_no_eve, qber_eve)
-    
-    This code runs the experiment 20 times (10 times without Eve and 10 times with Eve) and then plots the QBER comparison graph. The graph will show how the presence of Eve affects the QBER, with a clear threshold line to indicate when Eve is likely detected."""
+    # Task 3 — Plot QBER vs Eve intercept rate and save graph
+    plot_qber_vs_intercept_rate()
