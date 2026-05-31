@@ -9,3 +9,7 @@ The project has three main modules: `bb84.py`, `eve.py`, and `dashboard.py`.
 `eve.py` simulates eavesdropping and calculates the Quantum Bit Error Rate.
 `dashboard.py` provides a visual simulator with QBER graph, network topology, and key statistics.
 Run the project using: `python dashboard.py`
+
+## Progress
+- Week 1 ✓ — BB84 engine, Eve detection, live dashboard
+- Week 2 (Days 8-10) ✓ — Partial Eve model, key distillation, 3-node network
