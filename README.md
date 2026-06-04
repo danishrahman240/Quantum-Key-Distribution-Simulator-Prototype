@@ -12,4 +12,19 @@ Run the project using: `python dashboard.py`
 
 ## Progress
 - Week 1 ✓ — BB84 engine, Eve detection, live dashboard
-- Week 2 (Days 8-10) ✓ — Partial Eve model, key distillation, 3-node network
+- Week 2 Days 8–10 ✓ — Partial Eve model, key distillation, 3-node network
+- Week 2 Days 11–12 ✓ — Channel noise model, upgraded dashboard
+
+## Files
+| File | Purpose |
+|---|---|
+| bb84.py | Core BB84 quantum key exchange protocol |
+| eve.py | Eve eavesdropping attack + QBER calculator |
+| privacy.py | Error correction + privacy amplification |
+| network.py | 3-node trusted relay quantum network |
+| noise.py | Photon loss + bit-flip channel noise model |
+| dashboard.py | Live interactive simulation dashboard |
+
+## How to Run
+pip install matplotlib numpy
+python dashboard.py
