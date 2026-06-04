@@ -47,7 +47,7 @@ def compute_qber(alice_key, bob_key, sample=50):
     return round(errors / check * 100, 1) if check > 0 else 0
 
 
-def run_with_eve(n=300, eve_present=True, intercept_rate=1.0):
+def run_with_eve(n=300, eve_present=True, intercept_rate=1.0, noise_rate=0.0):
     """
     Runs the full BB84 protocol with optional Eve.
     Returns: (qber, status_string)
@@ -61,6 +61,11 @@ def run_with_eve(n=300, eve_present=True, intercept_rate=1.0):
         qubits = eve_intercept(qubits, alice_bases, intercept_rate)
 
     bob_bits            = measure_qubits(qubits, alice_bases, bob_bases)
+    # Apply channel noise if specified
+    if noise_rate > 0:
+        from noise import apply_noise
+        bob_bits = apply_noise(bob_bits, noise_rate)
+
     alice_key, bob_key  = sift_key(alice_bits, bob_bits, alice_bases, bob_bases)
     qber                = compute_qber(alice_key, bob_key)
 
