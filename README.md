@@ -14,6 +14,7 @@ Run the project using: `python dashboard.py`
 - Week 1 ✓ — BB84 engine, Eve detection, live dashboard
 - Week 2 Days 8–10 ✓ — Partial Eve model, key distillation, 3-node network
 - Week 2 Days 11–12 ✓ — Channel noise model, upgraded dashboard
+- Week 2 Days 13–14 ✓ — QKD message encryption, full pipeline test passing
 
 ## Files
 | File | Purpose |
