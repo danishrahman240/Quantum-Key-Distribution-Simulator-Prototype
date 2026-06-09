@@ -26,6 +26,11 @@ Run the project using: `python dashboard.py`
 | noise.py | Photon loss + bit-flip channel noise model |
 | dashboard.py | Live interactive simulation dashboard |
 
+## Repository
+https://github.com/danishrahman240/Quantum-Key-Distribution-Simulator-Prototype
+
 ## How to Run
+git clone https://github.com/danishrahman240/Quantum-Key-Distribution-Simulator-Prototype.git
+cd Quantum-Key-Distribution-Simulator-Prototype
 pip install matplotlib numpy
 python dashboard.py
