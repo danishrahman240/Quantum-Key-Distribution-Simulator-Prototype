@@ -30,7 +30,10 @@ Run the project using: `python dashboard.py`
 https://github.com/danishrahman240/Quantum-Key-Distribution-Simulator-Prototype
 
 ## How to Run
+
+```bash
 git clone https://github.com/danishrahman240/Quantum-Key-Distribution-Simulator-Prototype.git
 cd Quantum-Key-Distribution-Simulator-Prototype
 pip install matplotlib numpy
 python dashboard.py
+```
